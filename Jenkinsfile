@@ -24,6 +24,15 @@ pipeline {
                     }
                 }
 
+            stage('Verify Dependency Versions') {
+                steps {
+                    sh '''
+                        npm ls y18n
+                        npm ls y18n --package-lock-only --all
+                    '''
+                }
+            }
+
                 stage('OWASP Dependency Check') {
                     steps {
                         dependencyCheck additionalArguments: '''
