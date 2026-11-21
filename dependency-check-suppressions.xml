@@ -1,0 +1,14 @@
+
+<?xml version="1.0" encoding="UTF-8"?>
+<suppressions xmlns="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.3.xsd">
+    <suppress>
+        <notes><![CDATA[
+            CVE-2020-7774 false positive.
+            The lockfile declares y18n ^4.0.0 under yargs 15.4.1,
+            but the installed and resolved version is y18n 4.0.3.
+            The vulnerability was fixed in y18n 4.0.1.
+        ]]></notes>
+        <filePath regex="true">.*package-lock\.json\?yargs:15\.4\.1/y18n:\^4\.0\.0$</filePath>
+        <cve>CVE-2020-7774</cve>
+    </suppress>
+</suppressions>
