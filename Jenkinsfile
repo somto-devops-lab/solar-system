@@ -41,6 +41,7 @@ pipeline {
                             --format 'ALL'
                             --prettyPrint
                             --disableYarnAudit
+                            --suppression './dependency-check-suppressions.xml'
                         ''', odcInstallation: 'OWASP-DepCheck-10',
                         nvdCredentialsId: 'nvd-api-key'
                         dependencyCheckPublisher failedTotalCritical: 1, pattern: 'dependency-check-report.xml', stopBuild: true
