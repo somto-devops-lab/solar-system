@@ -45,12 +45,14 @@ app.post('/planet',   function(req, res) {
     planetModel.findOne({
         id: req.body.id
     }, function(err, planetData) {
+        
         if (err) {
-            alert("Ooops, We only have 9 planets and a sun. Select a number from 0 - 9")
-            res.send("Error in Planet Data")
+            console.error("MongoDB query error:", err);
+            return res.status(500).send("Error retrieving planet data");
         } else {
             res.send(planetData);
         }
+
     })
 })
 
