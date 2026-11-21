@@ -7,9 +7,8 @@ pipeline {
     nodejs 'nodejs-v22.22.1'
     }
     environment {
-    MONGO_URI = "mongodb+srv://cluster0.tpmafor.mongodb.net/superData"
+    MONGO_URI = "mongodb+srv://cluster0.tpmafor.mongodb.net/superData?authSource=admin"
     }
-	
     stages {
         stage('Insatlling Dependencies') {
             steps {
