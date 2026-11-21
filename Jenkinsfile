@@ -45,6 +45,7 @@ pipeline {
                         ''', odcInstallation: 'OWASP-DepCheck-10',
                         nvdCredentialsId: 'nvd-api-key'
                         dependencyCheckPublisher failedTotalCritical: 1, pattern: 'dependency-check-report.xml', stopBuild: true
+                        publishHTML([allowMissing: true, alwaysLinkToLastBuild: true, icon: '', keepAll: true, reportDir: './', reportFiles: 'dependency-check-report.html', reportName: 'Dependency HTML Report', reportTitles: '', useWrapperFileDirectly: true])
                     }
                 }
          
