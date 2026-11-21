@@ -1,11 +1,14 @@
 pipeline {
     agent any
     triggers {
-	githubPush()
+    githubPush()
     }
     tools {
-	nodejs 'nodejs-v22.22.1'
-   }
+    nodejs 'nodejs-v22.22.1'
+    }
+    environment {
+    MONGO_URI = "mongodb+srv://cluster0.tpmafor.mongodb.net/superData"
+    }
 	
     stages {
         stage('Insatlling Dependencies') {
@@ -54,8 +57,12 @@ pipeline {
         }
         stage('Unit Testing') {
             steps {
+                withCredentials([usernamePassword(credentialsId: 'Mongodb_Creden', passwordVariable: 'MONGO_PASSWORD', usernameVariable: 'MONGO_USERNAME')]) {
+    // some block
+}
                 sh 'npm test'
             }
+            junit allowEmptyResults: true, keepProperties: true, testResults: 'test-results.xml'
         }  
     }
 }
