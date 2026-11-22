@@ -90,7 +90,7 @@ pipeline {
                     -Dsonar.projectKey=Solar-System-Project \
                     -Dsonar.sources=. \
                     -Dsonar.host.url=http://127.0.0.1:9000 \
-                    -Dsonar.javascript.lcov.reportPaths=./coverage/lcov.info
+                    -Dsonar.javascript.lcov.reportPaths=./coverage/lcov.info \
                     -Dsonar.token=sqp_64125337c342af4ac5a7547da89aa560fa63014b'''
             }
         }
