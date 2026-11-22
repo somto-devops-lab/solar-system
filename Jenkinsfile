@@ -11,6 +11,7 @@ pipeline {
     MONGO_DB_CREDS = credentials('Mongodb_Creden')
     MONGO_USERNAME = credentials('mongo-db-username')
     MONGO_PASSWORD = credentials('mongo-db-password')
+    SONAR_SCANNER_HOME = tool 'sonarqube-scanner-6104477'
     }
     stages {
         stage('Insatlling Dependencies') {
@@ -85,7 +86,7 @@ pipeline {
         stage('SAST - SonarQube') {
             steps {
                 sh '''
-                sonar-scanner \
+                $SONAR_SCANNER_HOME/bin/sonar-scanner \
                     -Dsonar.projectKey=Solar-System-Project \
                     -Dsonar.sources=. \
                     -Dsonar.host.url=http://127.0.0.1:9000 \
