@@ -82,6 +82,16 @@ pipeline {
                 publishHTML([allowMissing: true, alwaysLinkToLastBuild: true, icon: '', keepAll: true, reportDir: 'coverage/Icov-report', reportFiles: 'index.html', reportName: 'Code Coverage HTML Report', reportTitles: '', useWrapperFileDirectly: true])
             }
         }
+        stage('SAST - SonarQube') {
+            steps {
+                sh '''
+                sonar-scanner \
+                    -Dsonar.projectKey=Solar-System-Project \
+                    -Dsonar.sources=. \
+                    -Dsonar.host.url=http://127.0.0.1:9000 \
+                    -Dsonar.token=sqp_64125337c342af4ac5a7547da89aa560fa63014b'''
+            }
+        }
     }    
     post {
         always {
