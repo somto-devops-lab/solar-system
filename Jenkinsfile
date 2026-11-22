@@ -8,6 +8,9 @@ pipeline {
     }
     environment {
     MONGO_URI = "mongodb+srv://cluster0.tpmafor.mongodb.net/superData?authSource=admin"
+    MONGO_DB_CREDS = credentials('Mongodb_Creden')
+    MONGO_USERNAME = credentials('mongo-db-username')
+    MONGO_PASSWORD = credentials('mongo-db-password')
     }
     stages {
         stage('Insatlling Dependencies') {
@@ -59,33 +62,37 @@ pipeline {
             } 
         }
         stage('Unit Testing') {
-            steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'Mongodb_Creden',
-                    passwordVariable: 'MONGO_PASSWORD',
-                    usernameVariable: 'MONGO_USERNAME'
-                )]) {
+            steps{
+                    sh 'echo Colon Separated - $MONGO_DB_CREDS'
+                    sh 'echo USERNAME - $MONGO_DB_CREDS_USR'
+                    sh 'echo PASSWORD - $MONGO_DB_CREDS_PSW'
                     sh 'npm test'
-                }
 
-                junit allowEmptyResults: true,
+                    junit allowEmptyResults: true,
                     keepProperties: true,
                     testResults: 'test-results.xml'
             }
         }
         stage('Code Coverage') {
             steps {
-                withCredentials([usernamePassword(
-                    credentialsId: 'Mongodb_Creden',
-                    passwordVariable: 'MONGO_PASSWORD',
-                    usernameVariable: 'MONGO_USERNAME'
-                )]) {
                     catchError(buildResult: 'SUCCESS', catchInterruptions: true, message: 'Oops! it will be fixed in feature release', stageResult: 'UNSTABLE') {
                     sh 'npm run coverage'
                     }
                 }
                 publishHTML([allowMissing: true, alwaysLinkToLastBuild: true, icon: '', keepAll: true, reportDir: 'coverage/Icov-report', reportFiles: 'index.html', reportName: 'Code Coverage HTML Report', reportTitles: '', useWrapperFileDirectly: true])
             }
-        }  
+        }
+    post {
+        always {
+            junit allowEmptyResults: true, keepProperties: true, testResults: 'dependency-check-junit.xml'
+            junit allowEmptyResults: true,
+                    keepProperties: true,
+                    testResults: 'test-results.xml'
+            publishHTML([allowMissing: true, alwaysLinkToLastBuild: true, icon: '', keepAll: true, reportDir: './', reportFiles: 'dependency-check-report.html', reportName: 'Dependency HTML Report', reportTitles: '', useWrapperFileDirectly: true])
+            publishHTML([allowMissing: true, alwaysLinkToLastBuild: true, icon: '', keepAll: true, reportDir: 'coverage/Icov-report', reportFiles: 'index.html', reportName: 'Code Coverage HTML Report', reportTitles: '', useWrapperFileDirectly: true])
+    
+        }
     }
+  
 }
+
