@@ -1,111 +1,178 @@
+
 pipeline {
     agent any
-    triggers {
-    githubPush()
-    }
-    tools {
-    nodejs 'nodejs-v22.22.1'
-    }
-    environment {
-    MONGO_URI = "mongodb+srv://cluster0.tpmafor.mongodb.net/superData?authSource=admin"
-    MONGO_DB_CREDS = credentials('Mongodb_Creden')
-    MONGO_USERNAME = credentials('mongo-db-username')
-    MONGO_PASSWORD = credentials('mongo-db-password')
-    SONAR_SCANNER_HOME = tool 'sonarqube-scanner-6104477'
-    }
-    stages {
-        stage('Insatlling Dependencies') {
-            options {
-                timestamps()
-            }
 
+    triggers {
+        githubPush()
+    }
+
+    options {
+        timestamps()
+        disableConcurrentBuilds()
+        skipDefaultCheckout(false)
+    }
+
+    tools {
+        nodejs 'nodejs-v22.22.1'
+    }
+
+    environment {
+        MONGO_URI = 'mongodb+srv://cluster0.tpmafor.mongodb.net/superData?authSource=admin'
+        SONAR_SCANNER_HOME = tool 'sonarqube-scanner-6104477'
+    }
+
+    stages {
+
+        stage('Install Dependencies') {
             steps {
-                sh 'npm install --no-audit'
+                sh 'npm ci --no-audit'
             }
         }
+
         stage('Dependency Scanning') {
             parallel {
-                stage('NPM Dependency Audit') {
+
+                stage('NPM Security Audit') {
                     steps {
-                        sh '''
-                            npm audit --audit-level=critical
-                            echo $?
-                        '''
+                        sh 'npm audit --audit-level=critical'
                     }
                 }
-
-            stage('Verify Dependency Versions') {
-                steps {
-                    sh '''
-                        npm ls y18n
-                        npm ls y18n --package-lock-only --all
-                    '''
-                }
-            }
 
                 stage('OWASP Dependency Check') {
                     steps {
-                        dependencyCheck additionalArguments: '''
-                            --scan './'
-                            --out './'
-                            --format 'ALL'
-                            --prettyPrint
-                            --disableYarnAudit
-                            --suppression './dependency-check-suppressions.xml'
-                        ''', odcInstallation: 'OWASP-DepCheck-10',
-                        nvdCredentialsId: 'nvd-api-key'
-                        dependencyCheckPublisher failedTotalCritical: 1, pattern: 'dependency-check-report.xml', stopBuild: true
-                        junit allowEmptyResults: true, keepProperties: true, testResults: 'dependency-check-junit.xml'
-                        publishHTML([allowMissing: true, alwaysLinkToLastBuild: true, icon: '', keepAll: true, reportDir: './', reportFiles: 'dependency-check-report.html', reportName: 'Dependency HTML Report', reportTitles: '', useWrapperFileDirectly: true])
+                        dependencyCheck(
+                            odcInstallation: 'OWASP-DepCheck-10',
+                            nvdCredentialsId: 'nvd-api-key',
+                            additionalArguments: '''
+                                --scan .
+                                --out .
+                                --format ALL
+                                --prettyPrint
+                                --disableYarnAudit
+                                --suppression ./dependency-check-suppressions.xml
+                            '''
+                        )
+
+                        dependencyCheckPublisher(
+                            pattern: 'dependency-check-report.xml',
+                            failedTotalCritical: 1,
+                            stopBuild: true
+                        )
+                    }
+
+                    post {
+                        always {
+                            junit(
+                                testResults: 'dependency-check-junit.xml',
+                                allowEmptyResults: true
+                            )
+
+                            publishHTML(target: [
+                                reportName: 'Dependency HTML Report',
+                                reportDir: '.',
+                                reportFiles: 'dependency-check-report.html',
+                                keepAll: true,
+                                alwaysLinkToLastBuild: true,
+                                allowMissing: true
+                            ])
+                        }
                     }
                 }
-         
-            } 
-        }
-        stage('Unit Testing') {
-            steps{
-                    sh 'echo Colon Separated - $MONGO_DB_CREDS'
-                    sh 'echo USERNAME - $MONGO_DB_CREDS_USR'
-                    sh 'echo PASSWORD - $MONGO_DB_CREDS_PSW'
-                    sh 'npm test'
-
-                    junit allowEmptyResults: true,
-                    keepProperties: true,
-                    testResults: 'test-results.xml'
             }
         }
+
+        stage('Unit Testing') {
+            steps {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'Mongodb_Creden',
+                        usernameVariable: 'MONGO_USERNAME',
+                        passwordVariable: 'MONGO_PASSWORD'
+                    )
+                ]) {
+                    sh 'npm test'
+                }
+            }
+
+            post {
+                always {
+                    junit(
+                        testResults: 'test-results.xml',
+                        allowEmptyResults: false
+                    )
+                }
+            }
+        }
+
         stage('Code Coverage') {
             steps {
-                    catchError(buildResult: 'SUCCESS', catchInterruptions: true, message: 'Oops! it will be fixed in feature release', stageResult: 'UNSTABLE') {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'Mongodb_Creden',
+                        usernameVariable: 'MONGO_USERNAME',
+                        passwordVariable: 'MONGO_PASSWORD'
+                    )
+                ]) {
                     sh 'npm run coverage'
-                    }
-                
-                publishHTML([allowMissing: true, alwaysLinkToLastBuild: true, icon: '', keepAll: true, reportDir: 'coverage/Icov-report', reportFiles: 'index.html', reportName: 'Code Coverage HTML Report', reportTitles: '', useWrapperFileDirectly: true])
+                }
+
+                sh 'test -s coverage/lcov.info'
+            }
+
+            post {
+                always {
+                    publishHTML(target: [
+                        reportName: 'Code Coverage HTML Report',
+                        reportDir: 'coverage/lcov-report',
+                        reportFiles: 'index.html',
+                        keepAll: true,
+                        alwaysLinkToLastBuild: true,
+                        allowMissing: true
+                    ])
+                }
             }
         }
+
         stage('SAST - SonarQube') {
             steps {
-                sh '''
-                $SONAR_SCANNER_HOME/bin/sonar-scanner \
-                    -Dsonar.projectKey=Solar-System-Project \
-                    -Dsonar.sources=. \
-                    -Dsonar.host.url=http://127.0.0.1:9000 \
-                    -Dsonar.javascript.lcov.reportPaths=./coverage/lcov.info \
-                    -Dsonar.token=sqp_64125337c342af4ac5a7547da89aa560fa63014b'''
+                timeout(time: 10, unit: 'MINUTES') {
+                    withSonarQubeEnv('sonarqube-server') {
+                        sh '''
+                            "$SONAR_SCANNER_HOME/bin/sonar-scanner" \
+                                -Dsonar.projectKey=Solar-System-Project \
+                                -Dsonar.sources=. \
+                                -Dsonar.exclusions=node_modules/**,coverage/** \
+                                -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
+                        '''
+                    }
+                }
             }
         }
-    }    
-    post {
-        always {
-            junit allowEmptyResults: true, keepProperties: true, testResults: 'dependency-check-junit.xml'
-            junit allowEmptyResults: true,
-                    keepProperties: true,
-                    testResults: 'test-results.xml'
-            publishHTML([allowMissing: true, alwaysLinkToLastBuild: true, icon: '', keepAll: true, reportDir: './', reportFiles: 'dependency-check-report.html', reportName: 'Dependency HTML Report', reportTitles: '', useWrapperFileDirectly: true])
-            publishHTML([allowMissing: true, alwaysLinkToLastBuild: true, icon: '', keepAll: true, reportDir: 'coverage/Icov-report', reportFiles: 'index.html', reportName: 'Code Coverage HTML Report', reportTitles: '', useWrapperFileDirectly: true])
-    
+
+        stage('Quality Gate') {
+            steps {
+                timeout(time: 5, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
+            }
         }
     }
-  
-}
 
+    post {
+        success {
+            echo 'Pipeline completed successfully.'
+        }
+
+        unstable {
+            echo 'Pipeline completed with unstable results.'
+        }
+
+        failure {
+            echo 'Pipeline failed. Check the failing stage.'
+        }
+
+        always {
+            echo 'Pipeline execution finished.'
+        }
+    }
+}
