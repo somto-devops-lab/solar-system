@@ -139,8 +139,10 @@ pipeline {
         stage('SAST - SonarQube') {
             steps {
                 timeout(time: 10, unit: 'MINUTES') {
-                    installationName: 'sonarqube-server',
-                    credentialsId: 'Sonarqube-token' {
+                    withSonarQubeEnv(
+                installationName: 'sonarqube-server',
+                credentialsId: 'Sonarqube-token'
+            ) {
                         sh '''
                             "$SONAR_SCANNER_HOME/bin/sonar-scanner" \
                                 -Dsonar.projectKey=Solar-System-Project \
