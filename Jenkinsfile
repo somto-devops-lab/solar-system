@@ -1,4 +1,3 @@
-
 pipeline {
     agent any
 
@@ -22,7 +21,6 @@ pipeline {
     }
 
     stages {
-
         stage('Install Dependencies') {
             steps {
                 sh 'npm ci --no-audit'
@@ -31,7 +29,6 @@ pipeline {
 
         stage('Dependency Scanning') {
             parallel {
-
                 stage('NPM Security Audit') {
                     steps {
                         sh 'npm audit --audit-level=critical'
@@ -112,37 +109,38 @@ pipeline {
                   message: 'Oops! It will be fixed in a feature release',
                   stageResult: 'UNSTABLE'
                 ) {
-                     withCredentials([
+                    withCredentials([
                      usernamePassword(
-                     credentialsId: 'Mongodb_Creden',
+                    credentialsId: 'Mongodb_Creden',
                      usernameVariable: 'MONGO_USERNAME',
                      passwordVariable: 'MONGO_PASSWORD'
                 )
             ]) {
-                sh 'npm run coverage'
+                        sh 'npm run coverage'
+                    }
+
+                    sh 'test -s coverage/lcov.info'
+                }
             }
 
-            sh 'test -s coverage/lcov.info'
-        }
-    }
-
-    post {
-        always {
+            post {
+                always {
             publishHTML(target: [
                 reportName: 'Code Coverage HTML Report',
-                reportDir: 'coverage/lcov-report',
+                    reportDir: 'coverage/lcov-report',
                 reportFiles: 'index.html',
                 keepAll: true,
                 alwaysLinkToLastBuild: true,
                 allowMissing: true
             ])
+                }
+            }
         }
-    }
-}
         stage('SAST - SonarQube') {
             steps {
                 timeout(time: 10, unit: 'MINUTES') {
-                    withSonarQubeEnv('sonarqube-server') {
+                    installationName: 'sonarqube-server',
+                    credentialsId: 'Sonarqube-token' {
                         sh '''
                             "$SONAR_SCANNER_HOME/bin/sonar-scanner" \
                                 -Dsonar.projectKey=Solar-System-Project \
