@@ -125,7 +125,7 @@ pipeline {
 
             post {
                 always {
-            publishHTML(target: [
+                    publishHTML(target: [
                 reportName: 'Code Coverage HTML Report',
                     reportDir: 'coverage/lcov-report',
                 reportFiles: 'index.html',
@@ -137,22 +137,30 @@ pipeline {
             }
         }
         stage('SAST - SonarQube') {
-            steps {
-                timeout(time: 10, unit: 'MINUTES') {
-                    withSonarQubeEnv(
+    steps {
+        timeout(time: 10, unit: 'MINUTES') {
+            withSonarQubeEnv(
                 installationName: 'sonarqube-server',
                 credentialsId: 'Sonarqube-token'
             ) {
-                        sh '''
-                            "$SONAR_SCANNER_HOME/bin/sonar-scanner" \
-                                -Dsonar.projectKey=Solar-System-Project \
-                                -Dsonar.sources=. \
-                                -Dsonar.exclusions=node_modules/**,coverage/** \
-                                -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
-                        '''
-                    }
-                }
+                sh '''
+                    if [ -n "$SONAR_AUTH_TOKEN" ]; then
+                        echo "SonarQube authentication token is available"
+                    else
+                        echo "ERROR: SonarQube authentication token is missing"
+                        exit 1
+                    fi
+
+                    "$SONAR_SCANNER_HOME/bin/sonar-scanner" \
+                        -Dsonar.projectKey=Solar-System-Project \
+                        -Dsonar.sources=. \
+                        -Dsonar.exclusions=node_modules/**,coverage/** \
+                        -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info \
+                        -Dsonar.token="$SONAR_AUTH_TOKEN"
+                '''
             }
+        }
+    }
         }
 
         stage('Quality Gate') {
